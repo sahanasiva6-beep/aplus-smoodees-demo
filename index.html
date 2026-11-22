@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A+ Smoodees Autopilot</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: phone-first app shell — header, tab bar, one working panel per tab, summary card at the end */
+/* Monochrome, dark-first. Black and white carry everything; red is reserved for 'needs Anthony'. */
+:root{
+  --bg:#0a0a0a; --surface:#121212; --soft:#1b1b1b; --line:#262626;
+  --fg:#f5f5f5; --muted:#8b8b8b;
+  --leaf:#f5f5f5; --leaf-ink:#0a0a0a;
+  --mango:#ffffff; --mango-fg:#0a0a0a; --mango-soft:#1b1b1b; --mango-ink:#d4d4d4;
+  --berry:#ff5a5a; --berry-soft:#2a1313;
+  --display:"Geist", "Helvetica Neue", Arial, sans-serif;
+  --body:"Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"Geist Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#ffffff; --surface:#ffffff; --soft:#f3f3f3; --line:#e6e6e6;
+  --fg:#0a0a0a; --muted:#6b6b6b; --leaf:#0a0a0a; --leaf-ink:#ffffff;
+  --mango:#0a0a0a; --mango-fg:#ffffff; --mango-soft:#f3f3f3; --mango-ink:#3a3a3a;
+  --berry:#d92d2d; --berry-soft:#fdecec; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#ffffff; --surface:#ffffff; --soft:#f3f3f3; --line:#e6e6e6;
+  --fg:#0a0a0a; --muted:#6b6b6b; --leaf:#0a0a0a; --leaf-ink:#ffffff;
+  --mango:#0a0a0a; --mango-fg:#ffffff; --mango-soft:#f3f3f3; --mango-ink:#3a3a3a;
+  --berry:#d92d2d; --berry-soft:#fdecec; color-scheme:light}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:880px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:8px}
+.brandrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.shop{font-family:var(--mono);font-weight:500;font-size:13px;letter-spacing:.14em;color:var(--fg)}
+.demo-tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,6.5vw,52px);line-height:1;margin:8px 0 4px;text-wrap:balance;letter-spacing:-.035em}
+h1 em{font-style:normal;color:var(--muted)}
+.lede{color:var(--muted);margin:0;max-width:60ch}
+
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--soft);border:1px solid var(--line);padding:4px;border-radius:12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.tabs button{font:600 14px var(--body);border:0;background:transparent;color:var(--muted);padding:10px 6px;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
+.tabs button small{font-weight:500;font-size:11px;opacity:.85}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+.tabs button:focus-visible,button:focus-visible{outline:2px solid var(--mango);outline-offset:2px}
+
+.panel{display:flex;flex-direction:column;gap:14px}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.panel-head h2{font-family:var(--display);font-weight:600;font-size:22px;margin:0;letter-spacing:-.02em}
+.panel-head p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.btn{font:600 14px var(--body);border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:var(--leaf);color:var(--leaf-ink)}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.btn.mango{background:var(--mango);color:var(--mango-fg)}
+
+.before{display:flex;gap:10px;align-items:flex-start;background:transparent;border:1px dashed var(--line);color:var(--muted);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.before b{color:var(--fg);font-weight:600}
+.before b{white-space:nowrap}
+
+.grid2{display:grid;grid-template-columns:1fr 1.4fr;gap:14px}
+@media (max-width:700px){.grid2{grid-template-columns:1fr}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.box h3{margin:0;font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.count{font-family:var(--mono);font-variant-numeric:tabular-nums;background:var(--soft);color:var(--fg);border-radius:999px;padding:1px 8px;font-size:12px;letter-spacing:0}
+
+.order{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+.order .top{display:flex;justify-content:space-between;gap:8px}
+.order .num{color:var(--muted);font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px}
+.order .items{color:var(--muted)}
+.src{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-right:6px;color:var(--fg)}
+.sims{display:flex;gap:8px;flex-wrap:wrap}
+.order.new{animation:pop 1.4s ease}
+@keyframes pop{0%{background:var(--mango-soft);transform:translateY(-4px)}100%{background:transparent;transform:none}}
+
+.prep{display:flex;flex-direction:column}
+.prow{display:grid;grid-template-columns:auto 44px 1fr;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow input{width:20px;height:20px;accent-color:var(--fg)}
+.qty{font-family:var(--mono);font-weight:500;font-size:24px;text-align:center;font-variant-numeric:tabular-nums;color:var(--fg)}
+.pname{font-weight:600}
+.pwho{font-size:12.5px;color:var(--muted)}
+.prow.done .pname,.prow.done .qty{text-decoration:line-through;opacity:.45}
+.prow.bump .qty{animation:bump .9s ease}
+@keyframes bump{30%{transform:scale(1.35);color:var(--mango)}}
+.prog{height:6px;background:var(--soft);border-radius:999px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--leaf);width:0;transition:width .3s}
+
+.people{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:500 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--berry)}
+
+.days{display:flex;flex-direction:column}
+.day{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;text-align:left;font:inherit;color:inherit;width:100%}
+.day:last-child{border-bottom:0}
+.day .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-size:13px;background:var(--soft);color:var(--muted)}
+.day.sent .n{background:var(--leaf);color:var(--leaf-ink)}
+.day.today .n{background:transparent;color:var(--fg);border:1.5px solid var(--fg)}
+.day[aria-current="true"] .t{color:var(--fg);font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.day .t{font-size:14px}
+.pill{font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pill.sent{background:var(--soft);color:var(--fg)}
+.pill.sched{background:var(--soft);color:var(--muted)}
+.pill.flag{background:var(--berry-soft);color:var(--berry)}
+.pill.auto{background:transparent;color:var(--muted);border:1px solid var(--line)}
+
+.phone{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:240px}
+.phone .ph-head{font-size:12px;color:var(--muted);text-align:center}
+.bub{max-width:85%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.45}
+.bub.out{align-self:flex-end;background:var(--leaf);color:var(--leaf-ink);border-bottom-right-radius:4px}
+.bub.in{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+.bub.anth{align-self:flex-end;background:transparent;color:var(--fg);border:1.5px solid var(--fg);border-bottom-right-radius:4px}
+.meta{font-size:11px;color:var(--muted)}
+.meta.r{align-self:flex-end}
+.ctrl{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;font-weight:600;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.switch{width:42px;height:24px;border-radius:999px;border:1px solid var(--line);background:var(--soft);position:relative;cursor:pointer;padding:0;flex:none}
+.switch i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:.2s}
+.switch[aria-checked="true"]{background:var(--fg);border-color:var(--fg)}
+.switch[aria-checked="true"] i{left:20px;background:var(--bg)}
+.edrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.edrow .btn{padding:7px 11px;font-size:13px}
+#ed{width:100%;font:14px/1.5 var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--fg);border-radius:10px;padding:10px;resize:vertical}
+.flagbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--berry-soft);color:var(--berry);border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600}
+.flagbar .btn{padding:7px 10px;font-size:13px}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.msg{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;text-align:left;font:inherit;color:inherit;width:100%}
+.msg:last-child{border-bottom:0}
+.msg[aria-current="true"]{background:var(--soft);border-radius:10px}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:500;font-size:12px;background:var(--soft);color:var(--fg);border:1px solid var(--line)}
+.msg .who{font-weight:600;font-size:14px;display:flex;gap:6px;align-items:baseline}
+.msg .who span{font-weight:400;font-size:12px;color:var(--muted)}
+.msg .pv{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg>div{min-width:0}
+
+.summary{background:var(--fg);color:var(--bg);border-radius:16px;padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.summary .k{font-family:var(--display);font-weight:700;font-size:34px;line-height:1;letter-spacing:-.03em}
+.summary .l{font-size:13.5px;opacity:.9;margin-top:4px}
+.summary .cta{grid-column:1/-1;border-top:1px solid color-mix(in srgb,var(--bg) 25%,transparent);padding-top:14px;font-size:14.5px}
+@media (max-width:600px){.summary{grid-template-columns:1fr}}
+footer{text-align:center;color:var(--muted);font-size:12.5px}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:20;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brandrow">
+      <div class="shop">A+ SMOODEES</div>
+      <div class="demo-tag">Demo by Formi · sample data</div>
+    </div>
+    <h1>Keep the personal touch. <em>Lose the busywork.</em></h1>
+    <p class="lede">Orders, cleanse check-ins and DMs, handled automatically, so Anthony only steps in where it matters.</p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-prep" aria-selected="true" data-tab="prep">Prep list<small>from all orders</small></button>
+    <button role="tab" id="tab-check" aria-selected="false" data-tab="check">Cleanse<small>check-ins</small></button>
+    <button role="tab" id="tab-inbox" aria-selected="false" data-tab="inbox">Inbox<small>social DMs</small></button>
+  </nav>
+
+  <!-- PREP -->
+  <section class="panel" id="p-prep">
+    <div class="panel-head">
+      <div><h2>Today's prep list</h2><p>Works with the Shopify store you already have. Every order, from every channel, rolls into one list of what to make.</p></div>
+      <div class="sims"><button class="btn mango" id="sim">+ Shopify order</button><button class="btn ghost" id="simdm">+ DM or phone order</button></div>
+    </div>
+    <div class="before"><b>Today:</b> Shopify orders, DMs and phone orders get copied by hand into an Excel sheet so staff know what to make.</div>
+    <div class="grid2">
+      <div class="box">
+        <h3>Incoming orders <span class="count" id="ocount">0</span></h3>
+        <div id="orders" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+      <div class="box">
+        <h3>What to make <span class="count" id="pcount">0 / 0</span></h3>
+        <div class="prog"><i id="progbar"></i></div>
+        <div class="prep" id="prep"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECK-INS -->
+  <section class="panel" id="p-check" hidden>
+    <div class="panel-head">
+      <div><h2>Cleanse check-ins</h2><p>Anthony writes each day's message once, and it goes out in his voice. He can edit any day, write a personal one, or pause autopilot and take over.</p></div>
+    </div>
+    <div class="before"><b>Today:</b> Anthony texts every cleanse customer one by one, every day.</div>
+    <div class="people" id="people"></div>
+    <div class="grid2">
+      <div class="box">
+        <h3>5-day cleanse <span class="count" id="dlabel"></span></h3>
+        <div class="days" id="days"></div>
+      </div>
+      <div class="box">
+        <h3>Message preview</h3>
+        <div class="phone" id="phone"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INBOX -->
+  <section class="panel" id="p-inbox" hidden>
+    <div class="panel-head">
+      <div><h2>Smart inbox</h2><p>Instagram, Facebook and Google questions in one place.</p></div>
+    </div>
+    <div class="before"><b>Today:</b> Anthony answers every DM himself, including the same questions over and over.</div>
+    <div class="filters" id="filters">
+      <button class="chip" aria-pressed="true" data-f="all">All</button>
+      <button class="chip" aria-pressed="false" data-f="flag"><span class="dot"></span>Needs Anthony</button>
+      <button class="chip" aria-pressed="false" data-f="auto">Auto-answered</button>
+    </div>
+    <div class="grid2">
+      <div class="box"><h3>Messages <span class="count" id="icount"></span></h3><div id="msgs"></div></div>
+      <div class="box"><h3>Conversation</h3><div class="phone" id="thread"></div></div>
+    </div>
+  </section>
+
+  <section class="summary">
+    <div><div class="k">2–3 hrs</div><div class="l">saved every day on typing, texting and replying</div></div>
+    <div><div class="k">5 → 20+</div><div class="l">cleanse customers a week, with the same effort</div></div>
+    <div><div class="k">100%</div><div class="l">of check-ins still sound like Anthony</div></div>
+    <div class="cta">Built on the Shopify store he already has. Formi sets it up, writes the messages with him, and keeps it running.</div>
+  </section>
+  <footer>Demo prepared by Formi for A+ Smoodees. All customers and orders shown are examples.</footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2200)}
+
+/* tabs */
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  ['prep','check','inbox'].forEach(id=>$('#p-'+id).hidden=id!==b.dataset.tab);
+}));
+
+/* ---------- PREP ---------- */
+const DRINKS=['Green Glow juice','Beet Boost juice','Citrus Detox shot','Mango Tango smoothie','Almond Recovery milk','Ginger Fire shot'];
+let orders=[
+  {n:1041,src:'Shopify',name:'Priya S.',time:'9:12 AM',type:'5-day cleanse',items:{'Green Glow juice':2,'Beet Boost juice':1,'Citrus Detox shot':1,'Almond Recovery milk':1}},
+  {n:1042,src:'Instagram DM',name:'Marcus T.',time:'9:40 AM',type:'Pickup',items:{'Mango Tango smoothie':2}},
+  {n:1043,src:'Shopify',name:'Dana L.',time:'10:05 AM',type:'3-day cleanse',items:{'Green Glow juice':2,'Ginger Fire shot':2,'Almond Recovery milk':1}},
+];
+const NAMES=['Aisha K.','Jordan P.','Mei W.','Carlos R.','Sophie B.','Nikhil V.','Grace O.','Liam F.'];
+let done=new Set(), nextN=1044, bumped=new Set();
+function renderPrep(){
+  $('#ocount').textContent=orders.length;
+  $('#orders').innerHTML=orders.slice().reverse().map((o,i)=>`<div class="order${o.fresh?' new':''}"><div class="top"><b>${o.name}</b><span class="num">#${o.n} · ${o.time}</span></div><div class="items"><span class="src">${o.src}</span>${o.type} · ${Object.entries(o.items).map(([d,q])=>q+'× '+d.split(' ').slice(0,2).join(' ')).join(', ')}</div></div>`).join('');
+  orders.forEach(o=>o.fresh=false);
+  const tot={};orders.forEach(o=>Object.entries(o.items).forEach(([d,q])=>{(tot[d]=tot[d]||{q:0,who:[]}).q+=q;tot[d].who.push(o.name.split(' ')[0]+(q>1?' ×'+q:''))}));
+  const rows=DRINKS.filter(d=>tot[d]);
+  $('#prep').innerHTML=rows.map(d=>`<label class="prow${done.has(d)?' done':''}${bumped.has(d)?' bump':''}"><input type="checkbox" id="pc-${d.replace(/\W/g,'')}" ${done.has(d)?'checked':''} data-d="${d}"><span class="qty">${tot[d].q}</span><span><div class="pname">${d}</div><div class="pwho">${tot[d].who.join(', ')}</div></span></label>`).join('');
+  bumped.clear();
+  const n=rows.filter(d=>done.has(d)).length;
+  $('#pcount').textContent=n+' / '+rows.length+' made';
+  $('#progbar').style.width=rows.length?(n/rows.length*100)+'%':'0';
+  $('#prep').querySelectorAll('input').forEach(c=>c.addEventListener('change',()=>{c.checked?done.add(c.dataset.d):done.delete(c.dataset.d);renderPrep()}));
+}
+function addOrder(src){
+  const cleanse=src==='Shopify'?Math.random()<.6:Math.random()<.3, items={};
+  const pick=cleanse?['Green Glow juice','Beet Boost juice','Citrus Detox shot','Almond Recovery milk']:[DRINKS[Math.floor(Math.random()*DRINKS.length)]];
+  pick.forEach(d=>{items[d]=1+Math.floor(Math.random()*2);bumped.add(d);done.delete(d)});
+  const now=new Date();
+  orders.push({n:nextN++,src,name:NAMES[(nextN)%NAMES.length],time:now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),type:cleanse?'5-day cleanse':'Pickup',items,fresh:true});
+  renderPrep();toast(src==='Shopify'?'New Shopify order added to the prep list':'DM order logged in one tap and added to the prep list');
+}
+$('#sim').addEventListener('click',()=>addOrder('Shopify'));
+$('#simdm').addEventListener('click',()=>addOrder(Math.random()<.5?'Phone':'Instagram DM'));
+renderPrep();
+
+/* ---------- CHECK-INS ---------- */
+const MSG=[
+  "Good morning {n}! Day 1 of your cleanse starts today 🌱 Drink your Green Glow first thing, then follow the order on your bottles. Sip water in between. I'm proud of you for starting!",
+  "Hey {n}! Day 2. This is usually the toughest day, so if you feel a little foggy, that's totally normal. Keep sipping and get some rest tonight. You've got this 💪",
+  "Morning {n}! Day 3, you're halfway there 🎉 Most people start feeling lighter around now. How's your energy today?",
+  "Day 4, {n}! Almost done. Try a short walk today and keep the Ginger Fire shot handy if you need a pick-me-up.",
+  "You did it, {n}! 🙌 Final day. Tomorrow ease back in with fruit, soup and light meals. I'd love to hear how you feel. Thank you for trusting A+ Smoodees!"
+];
+const PEOPLE=[
+  {name:'Priya',day:3,reply:{d:3,text:"Feeling kind of tired today, is that normal? Can I add a snack?"}},
+  {name:'Dana',day:2},
+  {name:'Kevin',day:5}
+];
+let who=0, sel=PEOPLE[0].day-1, answered=new Set(), paused=new Set(), custom={}, editing=null;
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderPeople(){
+  $('#people').innerHTML=PEOPLE.map((p,i)=>`<button class="chip" aria-pressed="${i===who}" data-i="${i}">${p.reply&&!answered.has(i)?'<span class="dot"></span>':''}${p.name} · Day ${p.day}${paused.has(i)?' · paused':''}</button>`).join('');
+  $('#people').querySelectorAll('button').forEach(b=>b.onclick=()=>{who=+b.dataset.i;sel=PEOPLE[who].day-1;editing=null;renderCheck()});
+}
+function renderCheck(){
+  renderPeople();const p=PEOPLE[who];
+  $('#dlabel').textContent='Day '+p.day+' of 5';
+  $('#days').innerHTML=MSG.map((m,i)=>{
+    const d=i+1, st=d<p.day?'sent':d===p.day?'today':'';
+    const flag=p.reply&&p.reply.d===d&&!answered.has(who);
+    const pill=flag?'<span class="pill flag">Reply needs you</span>':d<=p.day?'<span class="pill sent">Sent 8:00 AM</span>':paused.has(who)?'<span class="pill flag">Paused</span>':custom[who+'-'+i]?'<span class="pill sched">Personal</span>':'<span class="pill sched">Scheduled</span>';
+    return `<button class="day ${st}" aria-current="${i===sel}" data-i="${i}"><span class="n">${d}</span><span class="t">${['Kickoff','The tough day','Halfway','Almost there','Finish + ease back'][i]}</span>${pill}</button>`}).join('');
+  $('#days').querySelectorAll('.day').forEach(b=>b.onclick=()=>{sel=+b.dataset.i;editing=null;renderCheck()});
+  const d=sel+1, key=who+'-'+sel, future=d>p.day, own=custom[key];
+  const txt=esc(own||MSG[sel].replace('{n}',p.name));
+  let h=`<div class="ctrl"><span>Autopilot for ${p.name}</span><button class="switch" id="auto" role="switch" aria-checked="${!paused.has(who)}"><i></i></button></div>`;
+  if(editing){
+    const all=editing==='all';
+    h+=`<div class="ph-head">${all?'Editing Day '+d+' for every cleanse customer · {n} becomes their name':'Personal Day '+d+' message for '+p.name+' only'}</div><textarea id="ed" rows="5">${esc(all?MSG[sel]:(own||MSG[sel].replace('{n}',p.name)))}</textarea><div class="edrow"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="save">${all?'Save for everyone':'Save for '+p.name}</button></div>`;
+  } else {
+    const status=d<=p.day?'sent automatically':paused.has(who)?'autopilot paused, Anthony is handling '+p.name:'will send at 8:00 AM';
+    h+=`<div class="ph-head">To ${p.name} · Day ${d} · ${status}</div><div class="bub ${own?'anth':'out'}">${txt}</div><div class="meta r">${own?'Personal message from Anthony':'Auto · in Anthony\'s voice'}</div>`;
+    h+=`<div class="edrow"><button class="btn ghost" id="editall">Edit Day ${d} message</button>${future&&!paused.has(who)?`<button class="btn ghost" id="editone">Write a personal one for ${p.name}</button>`:''}</div>`;
+  }
+  if(p.reply&&p.reply.d===d){
+    h+=`<div class="bub in">${p.reply.text}</div>`;
+    if(answered.has(who)) h+=`<div class="bub anth">Totally normal on day 3! Yes, grab a handful of almonds or some cucumber. Keep going, Priya, you're doing amazing 🙏</div><div class="meta r">Anthony · personal reply</div>`;
+    else h+=`<div class="flagbar">Priya replied. This one's for you. <button class="btn" id="answer">Reply as Anthony</button></div>`;
+  }
+  $('#phone').innerHTML=h;
+  const a=$('#answer'); if(a)a.onclick=()=>{answered.add(who);renderCheck();toast('Personal reply sent. Back to autopilot.')};
+  $('#auto').onclick=()=>{paused.has(who)?paused.delete(who):paused.add(who);renderCheck();toast(paused.has(who)?'Autopilot paused for '+p.name+'. You\'re in control.':'Autopilot back on for '+p.name)};
+  const ea=$('#editall'); if(ea)ea.onclick=()=>{editing='all';renderCheck()};
+  const eo=$('#editone'); if(eo)eo.onclick=()=>{editing='one';renderCheck()};
+  const c=$('#cancel'); if(c)c.onclick=()=>{editing=null;renderCheck()};
+  const s=$('#save'); if(s)s.onclick=()=>{const v=$('#ed').value.trim(); if(!v)return; if(editing==='all'){MSG[sel]=v;toast('Day '+d+' message updated for every customer')}else{custom[key]=v;toast('Personal message saved for '+p.name)} editing=null;renderCheck()};
+}
+renderCheck();
+
+/* ---------- INBOX ---------- */
+const INBOX=[
+  {w:'@jess.eats',src:'Instagram',q:'What time do you close on Sundays?',a:"Hi Jess! We're open Sundays 10 AM to 5 PM. See you soon 🍹",auto:true},
+  {w:'Rob M.',src:'Facebook',q:'How much is the 3-day cleanse?',a:"Hey Rob! Prices and options for every cleanse are on our site, and you can order online for pickup. Want me to send the link?",auto:true},
+  {w:'@fitwithnina',src:'Instagram',q:"Hi! I'm a personal trainer with about 40 clients. Could we partner on a cleanse discount for them?",auto:false,why:'Partnership request'},
+  {w:'Samira H.',src:'Google',q:'Do your smoothies have added sugar?',a:"Great question, Samira! No added sugar, just whole fruit and veggies. 🙌",auto:true},
+  {w:'Tom B.',src:'Facebook',q:'My order from yesterday was missing a shot. Not happy.',auto:false,why:'Unhappy customer'},
+  {w:'@lena.k',src:'Instagram',q:'Is the cleanse okay if I work out?',a:"Hi Lena! Light workouts like walking or yoga are great. We'd skip heavy training until you're done 💚",auto:true},
+];
+let filt='all', cur=2, replied=new Set();
+function renderInbox(){
+  const list=INBOX.map((m,i)=>({...m,i})).filter(m=>filt==='all'||(filt==='flag'?!m.auto&&!replied.has(m.i):m.auto));
+  const nf=INBOX.filter((m,i)=>!m.auto&&!replied.has(i)).length;
+  $('#icount').textContent=nf+' need you';
+  $('#msgs').innerHTML=list.map(m=>`<button class="msg" aria-current="${m.i===cur}" data-i="${m.i}"><span class="av">${m.w.replace('@','').slice(0,2).toUpperCase()}</span><div><div class="who">${m.w}<span>${m.src}</span></div><div class="pv">${m.q}</div></div>${m.auto?'<span class="pill auto">Auto</span>':replied.has(m.i)?'<span class="pill sent">Replied</span>':'<span class="pill flag">Needs you</span>'}</button>`).join('')||'<p class="pwho">Nothing here. Nice.</p>';
+  $('#msgs').querySelectorAll('.msg').forEach(b=>b.onclick=()=>{cur=+b.dataset.i;renderInbox()});
+  const m=INBOX[cur];
+  let h=`<div class="ph-head">${m.w} · ${m.src}</div><div class="bub in">${m.q}</div>`;
+  if(m.auto) h+=`<div class="bub out">${m.a}</div><div class="meta r">Answered automatically in seconds</div>`;
+  else if(replied.has(cur)) h+=`<div class="bub anth">${cur===2?"Love this! Let's set up a call this week. What day works for you?":"So sorry about that, Tom! Your next shot is on us. I'll make sure it doesn't happen again."}</div><div class="meta r">Anthony · personal reply</div>`;
+  else h+=`<div class="flagbar">${m.why}. Flagged for Anthony. <button class="btn" id="ireply">Reply as Anthony</button></div>`;
+  $('#thread').innerHTML=h;
+  const r=$('#ireply'); if(r)r.onclick=()=>{replied.add(cur);renderInbox();toast('Reply sent')};
+}
+$('#filters').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{filt=c.dataset.f;$('#filters').querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x===c));renderInbox()});
+renderInbox();
+</script>
+
+</html>
